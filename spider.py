@@ -318,6 +318,9 @@ class EMianWang:
 				end_p_id = 999;
 				for p_id in range(1,1000):
 					str_ph="%.5d%.2d%.1d%.3d"%(n_manufactory_id, year, beltline, p_id);
+					if str_ph in dic_ph:
+						seris_error_num = 0;
+						continue;
 					ret,str_hash_id = self.getHashIDByPH(str_ph);
 					info_log.write('%s\t%d\n'%(str_ph,ret));
 					if 0 == ret:
@@ -329,7 +332,7 @@ class EMianWang:
 							print(str_json);
 					else:
 						seris_error_num +=1;
-						if seris_error_num >= 5:
+						if seris_error_num >= 100:
 							end_p_id = p_id;
 							break;
 					#sys.exit(1);
@@ -341,10 +344,24 @@ class EMianWang:
 					break;
 		info_log.close();
 
-if __name__=="__main__":
+
+def init():
 	#emiancang = EMianCang();
 	emiancang = EMianWang();
 	emiancang.crawByManufactorys();
 	#emiancang.getPHsByManufactory();
 	#emiancang.getDetailInfoByPH('65140161194');
 	#emiancang.getDetailInfoByPH('65638171086');
+
+dic_ph = {};
+def append_asin(file_name='ph'):
+	with open(file_name, 'r') as fd:
+		for line in fd:
+			line = line.strip();
+			dic_ph[line] = 1;
+	emiancang = EMianWang();
+	emiancang.crawByManufactorys();
+
+if __name__=="__main__":
+	#init();
+	append_asin();
