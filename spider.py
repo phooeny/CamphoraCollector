@@ -6,8 +6,6 @@ from lxml import etree
 import pdb
 import re
 import sys
-reload(sys)
-sys.setdefaultencoding( "utf-8" )
 
 
 class EMianCang:
@@ -68,7 +66,6 @@ class EMianCang:
 				'cangku':"/html/body/div[@class='surfacer']/table[@class='summar tabw']/tbody/tr[1]/td[3]",
 				};
 
-
 	def getHashIDByPH(self, str_ph):
 		url="%s%s"%(self.url_search, str_ph);
 		try:
@@ -106,7 +103,7 @@ class EMianCang:
 			#	pdb.set_trace();
 			result = html.xpath(self.xpath_dic[field]);
 			#print("%s\t%s"%(field,result[0].text.encode('utf-8').strip()));
-			dic_ret[field] = result[0].text.decode('utf-8').strip();
+			dic_ret[field] = result[0].text.encode('utf-8').strip();
 		return dic_ret;
 
 	def getDetailInfoByPH(self, str_ph):
@@ -116,7 +113,6 @@ class EMianCang:
 		for k in sorted(info_detail.keys()):
 			print("%s\t%s"%(k,info_detail[k]));
 		return info_detail;
-
 	
 	def crawByManufactorys(self):
 		factory_list_file='./factory_list';
@@ -281,20 +277,26 @@ class EMianWang:
 			result = html.xpath(self.xpath_dic[field]);
 			if len(result) < 1:
 				continue;
-			#print("%s\t%s"%(field, result[0].text.decode('utf-8').strip()));
+			#print("%s\t%s"%(field, result[0].text.encode('utf-8').strip()));
 			if None != result[0] and None != result[0].text:
-				dic_ret[field] = result[0].text.decode('utf-8').strip();
+				dic_ret[field] = result[0].text.encode('utf-8').strip().decode();
+				if field in ['huichao_avg', 'hanza_avg']:
+					sep_pos = dic_ret[field].find('%');
+					if -1 != sep_pos:
+						dic_ret[field] = dic_ret[field][:sep_pos];
 			else:
 				dic_ret[field] = 'NaN';
 		return dic_ret;
-
-
 	
 	def getDetailInfoByPH(self, str_ph):
-		_,str_hash_id = self.getHashIDByPH(str_ph);
+		res, str_hash_id = self.getHashIDByPH(str_ph);
+		if 0 != res:
+			return None;
 		info_detail = self.getDetailPage(str_hash_id,str_ph);
-		for k in sorted(info_detail.keys()):
-			print("%s\t%s"%(k,info_detail[k]));
+		#for k in sorted(info_detail.keys()):
+		#	print("%s\t%s"%(k,info_detail[k]));
+		if None != info_detail:
+			info_detail['ph'] = str_ph;
 		return info_detail;
 
 	def crawByManufactorys(self):
