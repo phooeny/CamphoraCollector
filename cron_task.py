@@ -1,7 +1,6 @@
 from spider import EMianWang
 from db import * 
 import sys
-import pdb
 
 if __name__ == '__main__':
 	dao = CottonPHDAO();
@@ -12,7 +11,6 @@ if __name__ == '__main__':
 			print("error in crawling ph: %d"%(asin_id));
 			continue;
 		asin_item = CottonPH(asin); 
-		pdb.set_trace();
 		response = dao.insert_asin(asin_item);
 		if 0 == response:
 			dao.del_uncrawled_asin(asin_id);

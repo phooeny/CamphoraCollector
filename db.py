@@ -4,6 +4,7 @@
 import sys
 import pymysql
 from collections import OrderedDict
+import pdb
 
 __all__ = ('CottonPHDAO','CottonPH');
 
@@ -50,11 +51,10 @@ class MySQLUtill:
 			# 发生错误时回滚
 			db.rollback()
 
-
 class CottonPH:
-	def __init__(self, dic_detail):
-		fields_mapping = OrderedDict(
-		{
+	
+	fields_mapping = OrderedDict(sorted(
+			{
 				'ph': ['production_code', 0, int],
 				'color_11': ['colour_w1', 0.0, float],
 				'color_21': ['colour_w2', 0.0, float],
@@ -104,29 +104,32 @@ class CottonPH:
 				'ph_in_page' : ['', 0, int],
 				'jiagongqiye': ['factory', 'NaN', '\'{}\''.format ],
 				'cangku': ['warehouse', 'NaN', '\'{}\''.format],
-				});
-		self.attr_mapping = OrderedDict();
-		self.attrs = OrderedDict();
-		for k in fields_mapping.keys():
-			if '' != fields_mapping[k][0]:
-				self.attrs[fields_mapping[k][0]] = fields_mapping[k][2](dic_detail.get(k, fields_mapping[k][1]));
+				}.items(), key=lambda t: t[0]));
 
-	def get_attr_names(self):
-		return ",".join(self.attrs.keys());
+	def __init__(self, dic_detail):
+		self.attrs = OrderedDict();
+		for k in self.fields_mapping.keys():
+			if '' != self.fields_mapping[k][0]:
+				self.attrs[self.fields_mapping[k][0]] = self.fields_mapping[k][2](dic_detail.get(k, self.fields_mapping[k][1]));
 
 	def get_attr_values(self):
 		return ",".join([str(v) for v in self.attrs.values()]);
 
 	def get_attr_str(self):
 		return ",".join(["(%s, %s)"%(str(k),str(v)) for k,v in self.attrs.items()]);
-		
+	
+	@classmethod
+	def get_attr_names(cls):
+		return ",".join([cls.fields_mapping[k][0] for k in cls.fields_mapping if '' != cls.fields_mapping[k][0]])
 
 class CottonPHDAO():
-
+	tbl_uncrawled = "cotton_crawler";
+	tbl_ctn_detail = "cotton_batch";
+	
 	def __init__(self):
 		self.conn = MySQLUtill();
-		self.tbl_uncrawled = "cotton_crawler";
-		self.tbl_ctn_detail = "cotton_batch";
+		#self.tbl_uncrawled = "cotton_crawler";
+		#self.tbl_ctn_detail = "cotton_batch";
 
 	def query_uncrawled_asins(self):
 		cursor = self.conn.db.cursor()
@@ -172,7 +175,36 @@ class CottonPHDAO():
 			ret = 1;
 		return ret;
 
-if __name__ == "__main__":
+
+def filter_asin(asin_attrs):
+	for k in ['huichao_avg', 'hanza_avg']:
+		if k in asin_attrs:
+			pos = asin_attrs[k].find('%');
+			if -1 != pos:
+				asin_attrs[k] = asin_attrs[k][:pos];
+	return asin_attrs;
+
+
+def sql_from_jsons(json_file_name, sql_file='insert.sql'):
+	import json
+	fd = open(json_file_name,'r');
+	fd_w = open(sql_file,'w');
+	#pdb.set_trace();
+	header = "INSERT INTO %s \n(%s) values \n"%(CottonPHDAO.tbl_ctn_detail, CottonPH.get_attr_names());
+	fd_w.write(header);
+	for line in fd:
+		line = line.strip();
+		if not line.startswith("{"):
+			continue;
+		dic_attr = json.loads(line);
+		dic_attr = filter_asin(dic_attr);
+		print(dic_attr['ph']);
+		asin_item = CottonPH(dic_attr);
+		fd_w.write("(%s),\n"%(asin_item.get_attr_values()));
+	fd.close();
+	fd_w.close();
+
+def demo_test():
 	dao = CottonPHDAO();
 	for asin in range(12345,12445):
 		dao.insert_uncrawled_asin(asin);
@@ -180,3 +212,7 @@ if __name__ == "__main__":
 	for asin_id in dao.query_uncrawled_asins():
 		print(asin_id);
 		dao.del_uncrawled_asin(asin_id);
+
+if __name__ == "__main__":
+	#demo_test();
+	sql_from_jsons('v2');
