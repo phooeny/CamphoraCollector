@@ -6,9 +6,59 @@ from lxml import etree
 import pdb
 import re
 import sys
+import logging
 
+class Spider(object):
+	
+	def crawByManufactorys(self, dic_filter_asin):
+		factory_list_file='./factory_list';
+		fp = open(factory_list_file,'r');
+		for line in fp:
+			line = line.strip();
+			arr = line.split('\t');
+			factory_id, factory_name = arr;
+			self.getPHsByManufactoryID(int(factory_id), [17], dic_filter_asin);
+	
+	def getPHsByManufactoryID(self, n_manufactory_id=65069, n_year_list=[17], dic_filter_asin={}):
+		ret_asins = [];
+		seris_error_threshold = 5;
+		sleep_interval = 1;
+		sleep_period = 2;
+		for year in n_year_list:
+			for beltline in range(1,10):
+				stage_num = 0;
+				seris_error_num = 0;
+				end_p_id = 999;
+				for p_id in range(1,1000):
+					str_ph="%.5d%.2d%.1d%.3d"%(n_manufactory_id, year, beltline, p_id);
+					if str_ph in dic_filter_asin:
+						seris_error_num = 0;
+						continue;
+					ret,str_hash_id = self.getHashIDByPH(str_ph);
+					logging.info('spider status: %s\t%d'%(str_ph,ret));
+					if 0 == ret:
+						seris_error_num = 0;
+						info_detail = self.getDetailPage(str_hash_id,str_ph);
+						if None != info_detail:
+							info_detail['ph'] = str_ph;
+							ret_asins.append(info_detail);
+							#str_json = json.dumps(info_detail);
+							#print(str_json);
+					else:
+						seris_error_num +=1;
+						if seris_error_num >= 100:
+							end_p_id = p_id;
+							break;
+					#sys.exit(1);
+					#stage_num += 1;
+					#if sleep_interval == stage_num:
+					#	time.sleep(sleep_period);
+					#	stage_num = 0;
+				if end_p_id <= seris_error_threshold:
+					break;
+		return ret_asins;
 
-class EMianCang:
+class EMianCang(Spider):
 	
 	def __init__(self):
 		self.url_search='http://www.emiancang.com/work/gjsj/search/getMhPhList.mvc?ph=';
@@ -113,57 +163,12 @@ class EMianCang:
 		for k in sorted(info_detail.keys()):
 			print("%s\t%s"%(k,info_detail[k]));
 		return info_detail;
-	
-	def crawByManufactorys(self):
-		factory_list_file='./factory_list';
-		fp = open(factory_list_file,'r');
-		for line in fp:
-			line = line.strip();
-			arr = line.split('\t');
-			factory_id, factory_name = arr;
-			self.getPHsByManufactoryID(int(factory_id));
-			
-	def getPHsByManufactoryID(self, n_manufactory_id=65069):
-		seris_error_threshold = 5;
-		sleep_interval = 1;
-		sleep_period = 30;
-		info_log = open('./log.items','a')
-		for year in [17]:
-			for beltline in range(1,10):
-				stage_num = 0;
-				seris_error_num = 0;
-				end_p_id = 999;
-				for p_id in range(1,1000):
-					str_ph="%.5d%.2d%.1d%.3d"%(n_manufactory_id, year, beltline, p_id);
-					ret,str_hash_id = self.getHashIDByPH(str_ph);
-					info_log.write('%s\t%d\n'%(str_ph,ret));
-					if 0 == ret:
-						seris_error_num = 0;
-						info_detail = self.getDetailPage(str_hash_id);
-						if None != info_detail:
-							info_detail['ph'] = str_ph;
-							str_json = json.dumps(info_detail);
-							print(str_json);
-					else:
-						seris_error_num +=1;
-						if seris_error_num >= 5:
-							end_p_id = p_id;
-							break;
-					stage_num += 1;
-					if sleep_interval == stage_num:
-						time.sleep(sleep_period);
-						stage_num = 0;
-				if end_p_id <= seris_error_threshold:
-					break;
-		info_log.close();
 
 	def getPagesByContentIDs(self):
 		cnt_id_start=312819;
 		url='http://www.emiancang.com/product/content/content--312819.html';
 
-
-
-class EMianWang:
+class EMianWang(Spider):
 	
 	def __init__(self):
 		self.url_search_ph='http://www.cottoneasy.com/cottonSearchFrame';
@@ -261,10 +266,10 @@ class EMianWang:
 		try:
 			response = requests.get(url, timeout=10);
 		except requests.exceptions.Timeout:
-			sys.stderr.write('timeout in getDetailPage:%s\t%s\n'%(str_ph, str_hash_id));
+			logging.error('timeout in getDetailPage:%s\t%s\n'%(str_ph, str_hash_id));
 			return None;
 		except :
-			sys.stderr.write('exception in getDetailPage:%s\t%s\n'%(str_ph, str_hash_id));
+			logging.error('exception in getDetailPage:%s\t%s\n'%(str_ph, str_hash_id));
 			return None;
 		return self.parseDetailPage(response.content);
 
@@ -279,7 +284,8 @@ class EMianWang:
 				continue;
 			#print("%s\t%s"%(field, result[0].text.encode('utf-8').strip()));
 			if None != result[0] and None != result[0].text:
-				dic_ret[field] = result[0].text.encode('utf-8').strip().decode();
+				#dic_ret[field] = result[0].text.encode('utf-8').strip().decode();
+				dic_ret[field] = result[0].text.strip();
 				if field in ['huichao_avg', 'hanza_avg']:
 					sep_pos = dic_ret[field].find('%');
 					if -1 != sep_pos:
@@ -288,7 +294,7 @@ class EMianWang:
 				dic_ret[field] = 'NaN';
 		return dic_ret;
 	
-	def getDetailInfoByPH(self, str_ph):
+	def crawlDetailInfoByPH(self, str_ph):
 		res, str_hash_id = self.getHashIDByPH(str_ph);
 		if 0 != res:
 			return None;
@@ -299,53 +305,6 @@ class EMianWang:
 			info_detail['ph'] = str_ph;
 		return info_detail;
 
-	def crawByManufactorys(self):
-		factory_list_file='./factory_list';
-		fp = open(factory_list_file,'r');
-		for line in fp:
-			line = line.strip();
-			arr = line.split('\t');
-			factory_id, factory_name = arr;
-			self.getPHsByManufactoryID(int(factory_id));
-
-	def getPHsByManufactoryID(self, n_manufactory_id=65069):
-		seris_error_threshold = 5;
-		sleep_interval = 1;
-		sleep_period = 2;
-		info_log = open('./log.emianwang.items','a')
-		for year in [17]:
-			for beltline in range(1,10):
-				stage_num = 0;
-				seris_error_num = 0;
-				end_p_id = 999;
-				for p_id in range(1,1000):
-					str_ph="%.5d%.2d%.1d%.3d"%(n_manufactory_id, year, beltline, p_id);
-					if str_ph in dic_ph:
-						seris_error_num = 0;
-						continue;
-					ret,str_hash_id = self.getHashIDByPH(str_ph);
-					info_log.write('%s\t%d\n'%(str_ph,ret));
-					if 0 == ret:
-						seris_error_num = 0;
-						info_detail = self.getDetailPage(str_hash_id,str_ph);
-						if None != info_detail:
-							info_detail['ph'] = str_ph;
-							str_json = json.dumps(info_detail);
-							print(str_json);
-					else:
-						seris_error_num +=1;
-						if seris_error_num >= 100:
-							end_p_id = p_id;
-							break;
-					#sys.exit(1);
-					#stage_num += 1;
-					#if sleep_interval == stage_num:
-					#	time.sleep(sleep_period);
-					#	stage_num = 0;
-				if end_p_id <= seris_error_threshold:
-					break;
-		info_log.close();
-
 
 def init():
 	#emiancang = EMianCang();
@@ -355,15 +314,21 @@ def init():
 	#emiancang.getDetailInfoByPH('65140161194');
 	#emiancang.getDetailInfoByPH('65638171086');
 
-dic_ph = {};
 def append_asin(file_name='ph'):
+	dic_ph = {};
 	with open(file_name, 'r') as fd:
 		for line in fd:
 			line = line.strip();
 			dic_ph[line] = 1;
 	emiancang = EMianWang();
-	emiancang.crawByManufactorys();
+	emiancang.crawByManufactorys(dic_ph);
+
+def crawl_by_asin_id(asin_id="65021171001"):
+	spider = EMianWang();
+	asin = spider.crawlDetailInfoByPH(asin_id);
+	print(asin);
 
 if __name__=="__main__":
 	#init();
-	append_asin();
+	#append_asin();
+	crawl_by_asin_id();
