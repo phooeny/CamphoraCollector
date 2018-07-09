@@ -23,6 +23,9 @@ def handle_uncrawled_submitted():
 			logging.error("error in crawling ph: %d"%(asin_id));
 			continue;
 		asin = filter_asin(asin);
+		if None == asin:
+			logging.info("asin:%s is filterd by rules."%(asin_id))
+			continue;
 		asin_item = CottonPH(asin); 
 		response = dao.insert_asin(asin_item);
 		if 0 == response:
@@ -55,5 +58,5 @@ def scan_factory(year='17'):
 					logging.info("scan success: %s"%(asin['ph']));
 
 if __name__ == '__main__':
-	#handle_uncrawled_submitted();
+	handle_uncrawled_submitted();
 	scan_factory();

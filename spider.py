@@ -248,16 +248,17 @@ class EMianWang(Spider):
 		try:
 			res = requests.post(self.url_search_ph, data=str_pay_load, headers=self.headers, timeout=10);
 		except requests.exceptions.Timeout:
-			sys.stderr.write('timeout in getHashIDByPH:%s\n'%(str_ph));
+			logging.error('timeout in getHashIDByPH:%s\n'%(str_ph));
 			return 1,None;
 		except:
-			sys.stderr.write('exception in getHashIDByPH:%s\n'%(str_ph));
+			logging.error('exception in getHashIDByPH:%s\n'%(str_ph));
 			return 1,None;
 
 		urls = re.findall(r'cottonBatchDetail[^"]+',res.text,re.S);
 		if len(urls) >= 1:
 			return 0,urls[1];
 		else:
+			logging.error("no hashcode is found for asin:%s"%(str_ph));
 			return 1,None;
 
 	def getDetailPage(self, str_hash_id, str_ph):
@@ -331,4 +332,4 @@ def crawl_by_asin_id(asin_id="65021171001"):
 if __name__=="__main__":
 	#init();
 	#append_asin();
-	crawl_by_asin_id();
+	crawl_by_asin_id('65310171073');
