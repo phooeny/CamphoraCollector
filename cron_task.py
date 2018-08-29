@@ -1,7 +1,9 @@
 from spider import EMianWang
 from db import * 
-import sys
 import logging
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 DATE_FORMAT = "%m/%d/%Y %H:%M:%S"
