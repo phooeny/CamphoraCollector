@@ -17,13 +17,18 @@ def filter_asin_id(asin_id):
 def handle_uncrawled_submitted():
 	dao = CottonPHDAO();
 	spider = EMianWang();
-	for asin_id in dao.query_uncrawled_asins():
+	for asin_id,source,scan_num in dao.query_uncrawled_asins():
+		if( 1 < scan_num):
+			continue;
 		asin = spider.crawlDetailInfoByPH("%d"%(asin_id));
+		scan_num += 1;
 		if None == asin:
 			logging.error("error in crawling ph: %d"%(asin_id));
+			dao.insert_uncrawled_asin(asin_id=asin_id, scan_num=scan_num);
 			continue;
 		asin = filter_asin(asin);
 		if None == asin:
+			dao.insert_uncrawled_asin(asin_id=asin_id, scan_num=scan_num);
 			logging.info("asin:%s is filterd by rules."%(asin_id))
 			continue;
 		asin_item = CottonPH(asin); 
@@ -59,4 +64,4 @@ def scan_factory(year='17'):
 
 if __name__ == '__main__':
 	handle_uncrawled_submitted();
-	scan_factory();
+	#scan_factory();

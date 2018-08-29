@@ -149,12 +149,12 @@ class CottonPHDAO():
 
 	def query_uncrawled_asins(self):
 		cursor = self.conn.db.cursor()
-		sql = "SELECT production_code FROM %s"%(self.tbl_uncrawled);
+		sql = "SELECT production_code,source,scan_num FROM %s"%(self.tbl_uncrawled);
 		try:
 			cursor.execute(sql)
 			results = cursor.fetchall()
 			for row in results:
-				yield row[0];
+				yield (row[0],row[1],row[2]);
 		except:
 			logging.error("Error: unable to fecth data")
 
@@ -168,9 +168,13 @@ class CottonPHDAO():
 			logging.error('删除数据失败!');
 			self.conn.db.rollback()
 
-	def insert_uncrawled_asin(self,asin_id):
+	def insert_uncrawled_asin(self, asin_id, **attr):
 		cursor = self.conn.db.cursor()
-		sql = "REPLACE INTO %s(production_code) VALUES (%d)"%(self.tbl_uncrawled, asin_id);
+		production_code = int(asin_id);
+		attr_source = str(attr.get('source','NULL'));
+		attr_scan_num = int(attr.get('scan_num', 0));
+		sql = "REPLACE INTO %s(production_code, source, scan_num) VALUES (%d, %s, %d)"%(
+				self.tbl_uncrawled, production_code, attr_source, attr_scan_num);
 		try:
 			cursor.execute(sql)
 			self.conn.db.commit()
@@ -253,13 +257,16 @@ def sql_from_jsons(json_file_name, sql_file='insert.sql'):
 
 def demo_test():
 	dao = CottonPHDAO();
-	for asin in range(12345,12445):
-		dao.insert_uncrawled_asin(asin);
-	sys.exit(0);
-	for asin_id in dao.query_uncrawled_asins():
-		logging.error(asin_id);
-		dao.del_uncrawled_asin(asin_id);
+	#for asin in range(12345,12445):
+	#	dao.insert_uncrawled_asin(asin);
+	#sys.exit(0);
+	for asin_id,source,scan_num in dao.query_uncrawled_asins():
+		print(asin_id);
+		print(source);
+		print(scan_num);
+		#logging.error(asin_id);
+		#dao.del_uncrawled_asin(asin_id);
 
 if __name__ == "__main__":
-	#demo_test();
-	sql_from_jsons('d');
+	demo_test();
+	#sql_from_jsons('d');
