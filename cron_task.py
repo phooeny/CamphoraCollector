@@ -1,6 +1,7 @@
 from spider import EMianWang
 from db import * 
 import logging
+import argparse
 import sys
 reload(sys)
 sys.setdefaultencoding('utf-8')
@@ -16,11 +17,11 @@ def filter_asin_id(asin_id):
 	if len(str_id) != 11:
 		return False;
 
-def handle_uncrawled_submitted():
+def handle_uncrawled_submitted(scan_num_threshold = 1):
 	dao = CottonPHDAO();
 	spider = EMianWang();
 	for asin_id,source,scan_num in dao.query_uncrawled_asins():
-		if( 1 < scan_num):
+		if( scan_num >= scan_num_threshold ):
 			continue;
 		asin = spider.crawlDetailInfoByPH("%d"%(asin_id));
 		scan_num += 1;
@@ -65,5 +66,16 @@ def scan_factory(year='17'):
 					logging.info("scan success: %s"%(asin['ph']));
 
 if __name__ == '__main__':
-	handle_uncrawled_submitted();
-	#scan_factory();
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--freq', required=True, choices=['5min','daily','weekly','manual','scratch'], help='path to dataset');
+	args = parser.parse_args();
+	if args.freq == '5min':
+		handle_uncrawled_submitted(1);
+	elif args.freq == 'daily':
+		handle_uncrawled_submitted(5);
+	elif args.freq == 'weekly':
+		handle_uncrawled_submitted(10);
+	elif args.freq == 'manual':
+		handle_uncrawled_submitted(float('inf'));
+	elif args.freq == 'scratch':
+		scan_factory();

@@ -61,11 +61,20 @@ class Spider(object):
 class EMianCang(Spider):
 	
 	def __init__(self):
+		
 		self.url_search='http://www.emiancang.com/work/gjsj/search/getMhPhList.mvc?ph=';
 		self.url_detail='http://www.emiancang.com/work/queryQuality/view_productZupi.jsp?gcmgy_mhph=';
 		self.http_headers = {
-				'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36',
+				'Accept': 'application/json, text/javascript, */*; q=0.01',
+				'Accept-Encoding': 'gzip, deflate',
+				'Accept-Language': 'en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7',
+				'Connection': 'keep-alive',
+				'Host': 'www.emiancang.com',
+				'Referer': 'http://www.emiancang.com',
+				'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36',
+				'X-Requested-With': 'XMLHttpRequest',
 				};
+
 		self.xpath_dic = {
 				'color_11':"/html/body/div[@class='surfacer']/table[@class='summar tabw']/tbody/tr[9]/td[3]",
 				'color_21':"/html/body/div[@class='surfacer']/table[@class='summar tabw']/tbody/tr[10]/td[2]",
@@ -119,7 +128,7 @@ class EMianCang(Spider):
 	def getHashIDByPH(self, str_ph):
 		url="%s%s"%(self.url_search, str_ph);
 		try:
-			response = requests.get(url, headers=self.http_headers, timeout=10);
+			response = requests.get(url, headers=self.http_headers, cookies=self.cookies, timeout=10);
 		except requests.exceptions.Timeout:
 			sys.stderr.write('timeout in getHashIDByPH:%s\n'%(str_ph));
 			return -1, None;
@@ -133,10 +142,10 @@ class EMianCang(Spider):
 		else:
 			return -1, None
 
-	def getDetailPage(self, str_hash_id):
+	def getDetailPage(self, str_hash_id, str_ph):
 		url="%s%s"%(self.url_detail, str_hash_id);
 		try:
-			response = requests.get(url, headers=self.http_headers, timeout=10);
+			response = requests.get(url, headers=self.http_headers, cookies=self.cookies, timeout=10);
 		except requests.exceptions.Timeout:
 			sys.stderr.write('timeout in getDetailPage:%s\n'%(str_ph));
 			return None;
@@ -155,13 +164,20 @@ class EMianCang(Spider):
 			#print("%s\t%s"%(field,result[0].text.encode('utf-8').strip()));
 			dic_ret[field] = result[0].text.encode('utf-8').strip();
 		return dic_ret;
-
-	def getDetailInfoByPH(self, str_ph):
-		_,str_hash_id = self.getHashIDByPH(str_ph);
-		info_detail = self.getDetailPage(str_hash_id);
-		#print(info_detail);
-		for k in sorted(info_detail.keys()):
-			print("%s\t%s"%(k,info_detail[k]));
+	
+	def crawlDetailInfoByPH(self, str_ph):
+		r = requests.get('http://www.emiancang.com/', headers = self.http_headers);
+		self.cookies = r.cookies;
+		#pdb.set_trace();
+		#res, str_hash_id = self.getHashIDByPH(str_ph);
+		#if 0 != res:
+		#	return None;
+		str_hash_id = '82C8B9CC64EF3D5ECF1C1E98064488EB';
+		info_detail = self.getDetailPage(str_hash_id,str_ph);
+		#for k in sorted(info_detail.keys()):
+		#	print("%s\t%s"%(k,info_detail[k]));
+		if None != info_detail:
+			info_detail['ph'] = str_ph;
 		return info_detail;
 
 	def getPagesByContentIDs(self):
@@ -325,11 +341,12 @@ def append_asin(file_name='ph'):
 	emiancang.crawByManufactorys(dic_ph);
 
 def crawl_by_asin_id(asin_id="65021171001"):
-	spider = EMianWang();
+	#spider = EMianWang();
+	spider = EMianCang();
 	asin = spider.crawlDetailInfoByPH(asin_id);
 	print(asin);
 
 if __name__=="__main__":
 	#init();
 	#append_asin();
-	crawl_by_asin_id('65310171073');
+	crawl_by_asin_id('65673171447');
