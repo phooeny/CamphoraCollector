@@ -41,7 +41,29 @@ def handle_uncrawled_submitted(scan_num_threshold = 1):
 		else:
 			logging.error('error in insert ph:%d'%(asin_id));
 
-def scan_factory(year='17'):
+def scan_incremental(year='18'):
+	factory_list_file='./factory_list';
+	dao = CottonPHDAO();
+	spider = EMianWang();
+	with open(factory_list_file,'r') as fd:
+		for line in fd:
+			logging.info(line);
+			line = line.strip();
+			arr = line.split('\t');
+			factory_id, factory_name = arr;
+			max_asinid = dao.query_max_asinid_by_factoryid(factory_id, year);
+			dic_filter_asin = {};
+			asin_list = spider.getPHsByManufactoryID(int(factory_id), [int(year)], dic_filter_asin);
+			for asin in asin_list:
+				asin = filter_asin(asin);
+				asin_item = CottonPH(asin);
+				response = dao.insert_asin(asin_item);
+				if 0 != response:
+					logging.error('error in insert asin \n%s'%(json.dumps(asin_id)));
+				else:
+					logging.info("scan success: %s"%(asin['ph']));
+
+def scan_factory(year='18'):
 	factory_list_file='./factory_list';
 	dao = CottonPHDAO();
 	spider = EMianWang();
