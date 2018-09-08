@@ -75,21 +75,30 @@ class ASINItem(Base):
 
 	@hybrid_property
 	def factory_id(self):
-		return func.cast(self.production_code / 1000000, Integer);
+		return func.cast(func.floor(self.production_code/1000000), Integer); 
 
 	@hybrid_property
 	def pipeline_id(self):
-		prefix = func.cast( self.production_code / 1000, Integer);
-		return func.cast( prefix % 10, Integer);
+		prefix = func.cast(func.floor(self.production_code/1000), Integer);
+		return func.cast(prefix % 10, Integer);
 
 	@hybrid_property
 	def year(self):
-		prefix = func.cast( self.production_code / 10000, Integer);
+		prefix = func.cast(func.floor( self.production_code/10000),Integer);
 		return func.cast(prefix % 100, Integer);
 
+class DBOrmDao():
+	
+	def __init__(self):
+		self.engine = create_engine('mysql+mysqlconnector://root:root@localhost:3306/ssm_demo_db');
+		self.DBSession = sessionmaker(bind=engine);
+		self.session = DBSession();
 	
 
-if __name__ == "__main__":
+	def __del__(self):
+		self.session.close();	
+
+def main():
 	# 初始化数据库连接:
 	engine = create_engine('mysql+mysqlconnector://root:root@localhost:3306/ssm_demo_db')
 	# 创建DBSession类型:
@@ -128,7 +137,8 @@ if __name__ == "__main__":
 	#session.commit()
 
 		#.filter( ASINItem.production_code/1000 % 100 == 17) \
-	query = session.query(ASINItem.factory_pipeline, func.max(ASINItem.production_code).label('max_asin_id')) \
+	query = session.query(ASINItem.factory_id, ASINItem.year, func.max(ASINItem.production_code).label('max_asin_id')) \
+		.filter(ASINItem.year == 17) \
 		.group_by(ASINItem.factory_pipeline) \
 		.order_by(ASINItem.factory_pipeline);
 	for row in query:
@@ -137,3 +147,6 @@ if __name__ == "__main__":
 
 	# 关闭session:
 	session.close()
+
+if __name__ == "__main__":
+	main();
