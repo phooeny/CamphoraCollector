@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-from sqlalchemy import Column, String, Integer, DateTime, create_engine
+from sqlalchemy import Column, String, Integer, Float, DateTime, create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-
+from sqlalchemy.sql import func
+from sqlalchemy.ext.hybrid import hybrid_property, hybrid_method
 
 Base = declarative_base()
 
@@ -51,44 +52,88 @@ class ASIN2Crawler(Base):
 		self.update_time = kw.get('update_time',None);
 		self.spider_detail = kw.get('spider_detail',None);
 		
+class ASINItem(Base):
+	__tablename__ = "cotton_batch";
+	
+	# schema
+	id = Column(Integer, primary_key=True, autoincrement=True);
+	production_code = Column(Integer, unique=True);
+	colour_w1 = Column(Float);
+	colour_w2 = Column(Float);
+	colour_w3 = Column(Float);
+	colour_w4 = Column(Float);
+	colour_w5 = Column(Float);
+	colour_l1 = Column(Float);
+	
+	
+	def __init__(self, production_code):
+		self.production_code = production_code;
 
+	@hybrid_property
+	def factory_pipeline(self):
+		return func.cast(self.factory_id * 10 + self.pipeline_id, Integer);
 
-# 初始化数据库连接:
-engine = create_engine('mysql+mysqlconnector://root:root@localhost:3306/ssm_demo_db')
-# 创建DBSession类型:
-DBSession = sessionmaker(bind=engine)
+	@hybrid_property
+	def factory_id(self):
+		return func.cast(self.production_code / 1000000, Integer);
 
-# 创建session对象:
-session = DBSession()
+	@hybrid_property
+	def pipeline_id(self):
+		prefix = func.cast( self.production_code / 1000, Integer);
+		return func.cast( prefix % 10, Integer);
 
-"""
-asin = session.query(ASIN2Crawler).filter(ASIN2Crawler.production_code==32091171290).one();
-print(asin.id);
-print(asin.production_code);
-print(asin.source);
-print(type(asin.scan_num));
-print(asin.update_time);
-print(asin.spider_detail);
-"""
+	@hybrid_property
+	def year(self):
+		prefix = func.cast( self.production_code / 10000, Integer);
+		return func.cast(prefix % 100, Integer);
 
-#fd = open('./factory_list', 'r');
-#for line in fd:
-#	line = line.strip();
-#	arr = line.split('\t');
-#	factory = Factory(arr[0],arr[1]);
-#	session.add(factory);
+	
 
-# 创建新User对象:
-#asin = ASIN2Crawler(123);
-# 添加到session:
-#session.add(asin)
-#session.merge(asin);
+if __name__ == "__main__":
+	# 初始化数据库连接:
+	engine = create_engine('mysql+mysqlconnector://root:root@localhost:3306/ssm_demo_db')
+	# 创建DBSession类型:
+	DBSession = sessionmaker(bind=engine)
 
-import datetime
-info = ASINCrawlerInfo(123,'emianwang',datetime.datetime.now());
-session.add(info);
-# 提交即保存到数据库:
-session.commit()
+	# 创建session对象:
+	session = DBSession()
 
-# 关闭session:
-session.close()
+	"""
+	asin = session.query(ASIN2Crawler).filter(ASIN2Crawler.production_code==32091171290).one();
+	print(asin.id);
+	print(asin.production_code);
+	print(asin.source);
+	print(type(asin.scan_num));
+	print(asin.update_time);
+	print(asin.spider_detail);
+	"""
+
+	#fd = open('./factory_list', 'r');
+	#for line in fd:
+	#	line = line.strip();
+	#	arr = line.split('\t');
+	#	factory = Factory(arr[0],arr[1]);
+	#	session.add(factory);
+
+	# 创建新User对象:
+	#asin = ASIN2Crawler(123);
+	# 添加到session:
+	#session.add(asin)
+	#session.merge(asin);
+
+	#import datetime
+	#info = ASINCrawlerInfo(123,'emianwang',datetime.datetime.now());
+	#session.add(info);
+	# 提交即保存到数据库:
+	#session.commit()
+
+		#.filter( ASINItem.production_code/1000 % 100 == 17) \
+	query = session.query(ASINItem.factory_pipeline, func.max(ASINItem.production_code).label('max_asin_id')) \
+		.group_by(ASINItem.factory_pipeline) \
+		.order_by(ASINItem.factory_pipeline);
+	for row in query:
+		print(row);
+	#query = query.rightjoin();
+
+	# 关闭session:
+	session.close()
