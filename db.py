@@ -132,6 +132,20 @@ class CottonPHDAO():
 		self.conn = MySQLUtill();
 		#self.tbl_uncrawled = "cotton_crawler";
 		#self.tbl_ctn_detail = "cotton_batch";
+	
+	def query_max_asinid_by_factoryid(self, factory_id, year):
+		batch_id = "%s%s"%(factory_id,year);
+		cursor = self.conn.db.cursor()
+		sql = "SELECT max(production_code) FROM %s where round(production_code/10000)=%s"%(self.tbl_ctn_detail, batch_id);
+		ret = None;
+		try:
+			cursor.execute(sql)
+			row = cursor.fetchone()
+			ret = row[0];
+		except:
+			logging.error("Error: unable to fecth data");
+		return ret;
+
 
 	def query_asinids_by_factoryid(self, factory_id, year):
 		batch_id = "%s%s"%(factory_id,year);

@@ -19,42 +19,48 @@ class Spider(object):
 			factory_id, factory_name = arr;
 			self.getPHsByManufactoryID(int(factory_id), [17], dic_filter_asin);
 	
-	def getPHsByManufactoryID(self, n_manufactory_id=65069, n_year_list=[17], dic_filter_asin={}):
+	def getPHsByPipelineID(self, n_manufactory_id, pipeline_id, year, dic_filter_asin, begin_asin=None):
 		ret_asins = [];
-		seris_error_threshold = 5;
 		sleep_interval = 1;
 		sleep_period = 2;
+			
+		stage_num = 0;
+		seris_error_num = 0;
+		end_p_id = 999;
+		start_p_id = begin_asin % 1000 if None != begin_asin else 1;
+		for p_id in range(start_p_id, 1000):
+			str_ph="%.5d%.2d%.1d%.3d"%(n_manufactory_id, year, pipeline_id, p_id);
+			if str_ph in dic_filter_asin:
+				seris_error_num = 0; # to deal with asins have been crawled
+				continue;
+			ret, str_hash_id = self.getHashIDByPH(str_ph);
+			logging.info('spider status: %s\t%d'%(str_ph,ret));
+			if 0 == ret:
+				seris_error_num = 0; # crawler success
+				info_detail = self.getDetailPage(str_hash_id,str_ph);
+				if None != info_detail:
+					#info_detail['ph'] = str_ph;
+					ret_asins.append(info_detail);
+					#str_json = json.dumps(info_detail);
+					#print(str_json);
+			else:
+				seris_error_num +=1;
+				if seris_error_num >= 5:   #threshold of error spider. previous 100
+					end_p_id = p_id;
+					break;
+			#stage_num += 1;
+			#if sleep_interval == stage_num:
+			#	time.sleep(sleep_period);
+			#	stage_num = 0;
+		return end_p_id, ret_asins;
+	
+	def getPHsByManufactoryID(self, n_manufactory_id, n_year_list, dic_filter_asin):
+		ret_asins = [];
 		for year in n_year_list:
 			for beltline in range(1,10):
-				stage_num = 0;
-				seris_error_num = 0;
-				end_p_id = 999;
-				for p_id in range(1,1000):
-					str_ph="%.5d%.2d%.1d%.3d"%(n_manufactory_id, year, beltline, p_id);
-					if str_ph in dic_filter_asin:
-						seris_error_num = 0;
-						continue;
-					ret,str_hash_id = self.getHashIDByPH(str_ph);
-					logging.info('spider status: %s\t%d'%(str_ph,ret));
-					if 0 == ret:
-						seris_error_num = 0;
-						info_detail = self.getDetailPage(str_hash_id,str_ph);
-						if None != info_detail:
-							info_detail['ph'] = str_ph;
-							ret_asins.append(info_detail);
-							#str_json = json.dumps(info_detail);
-							#print(str_json);
-					else:
-						seris_error_num +=1;
-						if seris_error_num >= 100:
-							end_p_id = p_id;
-							break;
-					#sys.exit(1);
-					#stage_num += 1;
-					#if sleep_interval == stage_num:
-					#	time.sleep(sleep_period);
-					#	stage_num = 0;
-				if end_p_id <= seris_error_threshold:
+				end_p_id, asins_pipeline = self.getPHsByPipelineID(n_manufactory_id, beltline, \
+					year, dic_filter_asin, begin_asin=None);
+				if end_p_id <=5 and len(asins_pipeline) <= 0: # if no asin is got in this pipeline, this factory is finished
 					break;
 		return ret_asins;
 
@@ -152,7 +158,11 @@ class EMianCang(Spider):
 		except :
 			sys.stderr.write('exception in getDetailPage:%s\n'%(str_ph));
 			return None;
-		return self.parseDetailPage(response.content);
+		dic_ret = self.parseDetailPage(response.content);
+		dic_ret['source'] = 'emiancang';
+		dic_ret['op_time'] = datetime.datetime.now();
+		dic_ret['ph'] = str_ph;
+		return dic_ret;
 
 	def parseDetailPage(self, page_html):
 		dic_ret = {};
@@ -288,6 +298,9 @@ class EMianWang(Spider):
 		except :
 			logging.error('exception in getDetailPage:%s\t%s\n'%(str_ph, str_hash_id));
 			return None;
+		dic_ret['source'] = 'emianwang';
+		dic_ret['op_time'] = datetime.datetime.now();
+		dic_ret['ph'] = str_ph;
 		return self.parseDetailPage(response.content);
 
 	def parseDetailPage(self, page_html):

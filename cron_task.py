@@ -1,4 +1,5 @@
 from spider import EMianWang
+from db_orm import *
 from db import * 
 import logging
 import argparse
@@ -45,24 +46,29 @@ def scan_incremental(year='18'):
 	factory_list_file='./factory_list';
 	dao = CottonPHDAO();
 	spider = EMianWang();
-	with open(factory_list_file,'r') as fd:
-		for line in fd:
-			logging.info(line);
-			line = line.strip();
-			arr = line.split('\t');
-			factory_id, factory_name = arr;
-			max_asinid = dao.query_max_asinid_by_factoryid(factory_id, year);
-			dic_filter_asin = {};
-			asin_list = spider.getPHsByManufactoryID(int(factory_id), [int(year)], dic_filter_asin);
-			for asin in asin_list:
-				asin = filter_asin(asin);
-				asin_item = CottonPH(asin);
-				response = dao.insert_asin(asin_item);
-				if 0 != response:
-					logging.error('error in insert asin \n%s'%(json.dumps(asin_id)));
-				else:
-					logging.info("scan success: %s"%(asin['ph']));
-
+	orm_dao = DBOrmDao();
+	for item in dao.qry_lastest_asin(year=18):
+		if 'factory_id' not in item or None == item['factory_id']:
+			continue;
+		factory_id = item['factory_id'];
+		if 'max_asin_id' not in item or None == item['max_asin_id']:
+			pipeline_id = 1 if 'pipeline_id' not in item or None == item['pipeline_id'] else item['pipeline_id'];
+			max_asinid = int("%d%d001"%(factory_id,pipeline_id));
+		else:
+			max_asinid = item['max_asin_id'] + 1;
+			
+		logging.info(item);
+		dic_filter_asin = {};
+		asin_list = spider.getPHsByManufactoryID(int(factory_id), [int(year)], dic_filter_asin);
+		for asin in asin_list:
+			asin = filter_asin(asin);
+			asin_item = CottonPH(asin);
+			response = dao.insert_asin(asin_item);
+			if 0 != response:
+				logging.error('error in insert asin \n%s'%(json.dumps(asin_id)));
+			else:
+				logging.info("scan success: %s"%(asin['ph']));
+				orm_dao.insert_asin(asin);
 def scan_factory(year='18'):
 	factory_list_file='./factory_list';
 	dao = CottonPHDAO();
@@ -73,8 +79,8 @@ def scan_factory(year='18'):
 			line = line.strip();
 			arr = line.split('\t');
 			factory_id, factory_name = arr;
-			asin_list = dao.query_asinids_by_factoryid(factory_id, year);
 			dic_filter_asin = {};
+			asin_list = dao.query_asinids_by_factoryid(factory_id, year);
 			for k in asin_list:
 				dic_filter_asin[str(k)] = 1;
 			asin_list = spider.getPHsByManufactoryID(int(factory_id), [int(year)], dic_filter_asin);
@@ -83,13 +89,13 @@ def scan_factory(year='18'):
 				asin_item = CottonPH(asin);
 				response = dao.insert_asin(asin_item);
 				if 0 != response:
-					logging.error('error in insert asin \n%s'%(json.dumps(asin_id)));
+					logging.error('error in insert asin \n%s'%(json.dumps(asin)));
 				else:
 					logging.info("scan success: %s"%(asin['ph']));
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--freq', required=True, choices=['5min','daily','weekly','manual','scratch'], help='path to dataset');
+	parser.add_argument('--freq', required=True, choices=['5min','daily','weekly','manual','scratch','incremental'], help='path to dataset');
 	args = parser.parse_args();
 	if args.freq == '5min':
 		handle_uncrawled_submitted(1);
@@ -101,3 +107,5 @@ if __name__ == '__main__':
 		handle_uncrawled_submitted(float('inf'));
 	elif args.freq == 'scratch':
 		scan_factory();
+	elif args.freq == 'incremental':
+		scan_incremental();

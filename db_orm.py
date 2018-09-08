@@ -6,6 +6,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
 from sqlalchemy.ext.hybrid import hybrid_property, hybrid_method
+import datetime
+
+__all__ = ['DBOrmDao','Factory','ASINCrawlerInfo']
 
 Base = declarative_base()
 
@@ -14,13 +17,13 @@ class ASINCrawlerInfo(Base):
 	
 	id = Column(Integer, primary_key=True, autoincrement=True)
 	production_code = Column(Integer, nullable=False);
-	source = Column(String(10),nullable=False);
-	op_time = Column(DateTime, nullable=False);
+	source = Column(String(10), nullable=False);
+	op_time = Column(DateTime,  nullable=False);
 
-	def __init__(self, production_code, source, op_time):
-		self.production_code = production_code;
-		self.source = source;
-		self.op_time = op_time;
+	def __init__(self, production_code, source, op_time, **kw):
+		self.production_code = int(production_code);
+		self.source = kw.get('source',None);
+		self.op_time = kw.get('op_time',None);
 	
 class Factory(Base):
 	__tablename__ = 'factory';
@@ -89,12 +92,67 @@ class ASINItem(Base):
 
 class DBOrmDao():
 	
-	def __init__(self):
-		self.engine = create_engine('mysql+mysqlconnector://root:root@localhost:3306/ssm_demo_db');
-		self.DBSession = sessionmaker(bind=engine);
-		self.session = DBSession();
+	def __init__(self, db_link="mysql+mysqlconnector://root:root@localhost:3306/ssm_demo_db"):
+		self.engine = create_engine(db_link);
+		self.DBSession = sessionmaker(bind=self.engine);
+		self.session = self.DBSession();
 	
+	def qry_max_asin_id(self, year=17):
+		query = self.session.query( ASINItem.factory_id, \
+				ASINItem.year, \
+				ASINItem.pipeline_id, \
+				func.max(ASINItem.production_code).label('max_asin_id')) \
+			.filter(ASINItem.year == year) \
+			.group_by(ASINItem.factory_pipeline) \
+			.order_by(ASINItem.factory_pipeline);
+		
+		for row in query:
+			print(row);
+	
+	def qry_lastest_asin(self, year=17):
+		stmt = self.session.query( ASINItem.factory_id.label('factory_id'), \
+				ASINItem.year.label('year'), \
+				ASINItem.pipeline_id.label('pipeline_id'), \
+				func.max(ASINItem.production_code).label('max_asin_id')) \
+			.filter(ASINItem.year == year) \
+			.group_by(ASINItem.factory_pipeline).subquery();
+		
+		query = self.session.query(Factory.factory_id, stmt.c.year, stmt.c.pipeline_id, stmt.c.max_asin_id) \
+			.outerjoin(stmt, Factory.factory_id == stmt.c.factory_id) \
+			.order_by(Factory.factory_id);
 
+		for row in query:
+			dic_ret = {};
+			dic_ret['factory_id'] = row[0];
+			dic_ret['year'] = row[1];
+			dic_ret['pipeline_id'] = row[2];
+			dic_ret['max_asin_id'] = row[3]
+			yield dic_ret;				
+
+	def insert_asin(self, asin_spider):
+		#TODO insert asin
+		#asin = ASINItem(asin_spider);
+		#self.session.add(asin);
+		#insert update_time
+		info = ASINCrawlerInfo(asin_spider['ph'], **asin_spider);
+		self.session.add(info);
+		self.session.commit();
+
+	def qry_factory_list(self):
+		fty_list = self.session.query(Factory).all();
+		for fty in fty_list:
+			print("%d\t%s"%(fty.factory_id, fty.factory_name));
+
+	def insert_factory_by_file(self, file_name='./factory_list'):	
+		fd = open(file_name, 'r');
+		for line in fd:
+			line = line.strip();
+			arr = line.split('\t');
+			factory = Factory(arr[0],arr[1]);
+			self.session.add(factory);
+		self.session.commit()
+		fd.close();
+	
 	def __del__(self):
 		self.session.close();	
 
@@ -117,12 +175,6 @@ def main():
 	print(asin.spider_detail);
 	"""
 
-	#fd = open('./factory_list', 'r');
-	#for line in fd:
-	#	line = line.strip();
-	#	arr = line.split('\t');
-	#	factory = Factory(arr[0],arr[1]);
-	#	session.add(factory);
 
 	# 创建新User对象:
 	#asin = ASIN2Crawler(123);
@@ -136,17 +188,20 @@ def main():
 	# 提交即保存到数据库:
 	#session.commit()
 
-		#.filter( ASINItem.production_code/1000 % 100 == 17) \
 	query = session.query(ASINItem.factory_id, ASINItem.year, func.max(ASINItem.production_code).label('max_asin_id')) \
 		.filter(ASINItem.year == 17) \
 		.group_by(ASINItem.factory_pipeline) \
 		.order_by(ASINItem.factory_pipeline);
 	for row in query:
 		print(row);
-	#query = query.rightjoin();
 
 	# 关闭session:
 	session.close()
 
 if __name__ == "__main__":
-	main();
+	#main();
+	dao = DBOrmDao();
+	#dao.qry_max_asin_id();
+	for i in dao.qry_lastest_asin():
+		print(i);
+	#dao.qry_factory_list();
