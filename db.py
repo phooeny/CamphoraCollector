@@ -143,7 +143,7 @@ class CottonPHDAO():
 			row = cursor.fetchone()
 			ret = row[0];
 		except:
-			logging.error("Error: unable to fecth data");
+			logging.error("Error: query_max_asinid_by_factoryid unable to fecth data");
 		return ret;
 
 
@@ -158,7 +158,7 @@ class CottonPHDAO():
 			for row in results:
 				ret.append( row[0]);
 		except:
-			logging.error("Error: unable to fecth data");
+			logging.error("Error: query_asinids_by_factoryid unable to fecth data");
 		return ret;
 
 	def query_uncrawled_asins(self):
@@ -170,7 +170,7 @@ class CottonPHDAO():
 			for row in results:
 				yield (row[0],row[1],row[2]);
 		except:
-			logging.error("Error: unable to fecth data")
+			logging.error("Error: query_uncrawled_asins unable to fecth data")
 
 	def del_uncrawled_asin(self, asin_id):
 		cursor = self.conn.db.cursor()

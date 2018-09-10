@@ -7,6 +7,7 @@ import pdb
 import re
 import sys
 import logging
+import datetime
 
 class Spider(object):
 	
@@ -298,10 +299,11 @@ class EMianWang(Spider):
 		except :
 			logging.error('exception in getDetailPage:%s\t%s\n'%(str_ph, str_hash_id));
 			return None;
+		dic_ret = self.parseDetailPage(response.content);
 		dic_ret['source'] = 'emianwang';
 		dic_ret['op_time'] = datetime.datetime.now();
 		dic_ret['ph'] = str_ph;
-		return self.parseDetailPage(response.content);
+		return dic_ret;
 
 	def parseDetailPage(self, page_html):
 		dic_ret = {};
