@@ -63,6 +63,7 @@ class Spider(object):
 					year, dic_filter_asin, begin_asin=None);
 				if end_p_id <=5 and len(asins_pipeline) <= 0: # if no asin is got in this pipeline, this factory is finished
 					break;
+				ret_asins = ret_asins + asins_pipeline;
 		return ret_asins;
 
 class EMianCang(Spider):

@@ -7,7 +7,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
 from sqlalchemy.ext.hybrid import hybrid_property, hybrid_method
 import datetime
-
 __all__ = ['DBOrmDao','Factory','ASINCrawlerInfo']
 
 Base = declarative_base()
@@ -20,10 +19,10 @@ class ASINCrawlerInfo(Base):
 	source = Column(String(10), nullable=False);
 	op_time = Column(DateTime,  nullable=False);
 
-	def __init__(self, production_code, source, op_time, **kw):
-		self.production_code = int(production_code);
-		self.source = kw.get('source',None);
-		self.op_time = kw.get('op_time',None);
+	def __init__(self, asin_spider_dict):
+		self.production_code = int(asin_spider_dict['ph']);
+		self.source = asin_spider_dict.get('source',None);
+		self.op_time = asin_spider_dict.get('op_time',None);
 	
 class Factory(Base):
 	__tablename__ = 'factory';
@@ -134,7 +133,7 @@ class DBOrmDao():
 		#asin = ASINItem(asin_spider);
 		#self.session.add(asin);
 		#insert update_time
-		info = ASINCrawlerInfo(asin_spider['ph'], **asin_spider);
+		info = ASINCrawlerInfo(asin_spider);
 		self.session.add(info);
 		self.session.commit();
 

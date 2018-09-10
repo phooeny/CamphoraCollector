@@ -21,6 +21,7 @@ def filter_asin_id(asin_id):
 def handle_uncrawled_submitted(scan_num_threshold = 1):
 	dao = CottonPHDAO();
 	spider = EMianWang();
+	orm_dao = DBOrmDao();
 	for asin_id,source,scan_num in dao.query_uncrawled_asins():
 		if( scan_num >= scan_num_threshold ):
 			continue;
@@ -39,6 +40,7 @@ def handle_uncrawled_submitted(scan_num_threshold = 1):
 		response = dao.insert_asin(asin_item);
 		if 0 == response:
 			dao.del_uncrawled_asin(asin_id);
+			orm_dao.insert_asin(asin);
 		else:
 			logging.error('error in insert ph:%d'%(asin_id));
 
