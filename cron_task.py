@@ -49,7 +49,7 @@ def scan_incremental_tricky():
 	orm_dao = DBOrmDao();
 	for ph in spider.crawlSearchHubPage(max_page_num=-1):
 		#print(ph);
-		if not None == orm_dao.qry_asin_by_ph(ph):
+		if not None == orm_dao.qry_asin_by_ph(ph) and not None == orm_dao.qry_asin_in_spider_queue_by_ph(ph):
 			orm_dao.insert_asin_to_crawle(ph);
 			logging.info("detect asin to crawl : %s"%(ph));
 

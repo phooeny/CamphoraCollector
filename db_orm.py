@@ -156,6 +156,10 @@ class DBOrmDao():
 		asin = ASIN2Crawler(ph, **kw);
 		self.session.add(asin);
 		self.session.commit();
+
+	def qry_asin_in_spider_queue_by_ph(self, ph):
+		asin = self.session.query(ASIN2Crawler).filter(ASIN2Crawler.production_code == ph).first();
+		return asin;
 	
 	def qry_asin_by_ph(self, ph):
 		asin = self.session.query(ASINItem).filter(ASINItem.production_code == ph).first();
