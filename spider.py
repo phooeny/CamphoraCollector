@@ -338,6 +338,35 @@ class EMianWang(Spider):
 			info_detail['ph'] = str_ph;
 		return info_detail;
 
+	def crawlSearchHubPage(self, max_page_num, **kw):
+		url="http://www.cottoneasy.com/cottonWareResourceFrame";
+		pay_load = {
+				'count':0,
+				'producePlaceList':[],
+				'provinceList' : [],
+				'yearsList' : ['2018'],
+				};
+		cur_page_num = 0;
+		cur_page_item_num = 20;
+		while cur_page_item_num >= 20 and (cur_page_num < max_page_num or max_page_num < 0):
+			pay_load['count'] = cur_page_num * 20;
+			cur_page_num += 1;
+			str_pay_load = json.dumps(pay_load);
+			try:
+				res = requests.post(url, data=str_pay_load, headers=self.headers, timeout=10);
+			except requests.exceptions.Timeout:
+				logging.error('timeout in crawlSearchHubPage\n');
+				raise Exception("spider timeout\n");
+			except:
+				logging.error('exception in crawlSearchHubPage\n');
+				raise Exception("spider exception\n");
+			html = etree.HTML(res.text);
+			element_list = html.xpath("//ul/li[@class='f-left']");
+			cur_page_item_num = len(element_list);
+			for element in element_list:
+				ph = element.xpath('.//div[@class="item"]/div[@class="iteminfo"]/div[@class="info"]/a[1]/div[@class="info-t1"]/p[@class="fsize_20 color_rgb"][1]/span')[0].text.strip();
+				yield ph;
+		return;
 
 def init():
 	#emiancang = EMianCang();
@@ -365,4 +394,8 @@ def crawl_by_asin_id(asin_id="65021171001"):
 if __name__=="__main__":
 	#init();
 	#append_asin();
-	crawl_by_asin_id('65673171447');
+	#crawl_by_asin_id('65673171447');
+	emianwang = EMianWang();
+	#pdb.set_trace();
+	for ph in emianwang.crawlSearchHubPage(max_page_num=2, t=3):
+		print(ph);

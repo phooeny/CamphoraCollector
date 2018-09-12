@@ -44,6 +44,15 @@ def handle_uncrawled_submitted(scan_num_threshold = 1):
 		else:
 			logging.error('error in insert ph:%d'%(asin_id));
 
+def scan_incremental_tricky():
+	spider = EMianWang();
+	orm_dao = DBOrmDao();
+	for ph in spider.crawlSearchHubPage(max_page_num=-1):
+		#print(ph);
+		if not None == orm_dao.qry_asin_by_ph(ph):
+			orm_dao.insert_asin_to_crawle(ph);
+			logging.info("detect asin to crawl : %s"%(ph));
+
 def scan_incremental(year='18'):
 	factory_list_file='./factory_list';
 	dao = CottonPHDAO();
@@ -110,4 +119,5 @@ if __name__ == '__main__':
 	elif args.freq == 'scratch':
 		scan_factory();
 	elif args.freq == 'incremental':
-		scan_incremental();
+		scan_incremental_tricky()
+		#scan_incremental();

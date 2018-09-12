@@ -151,7 +151,16 @@ class DBOrmDao():
 			self.session.add(factory);
 		self.session.commit()
 		fd.close();
+
+	def insert_asin_to_crawle(self, ph, **kw):
+		asin = ASIN2Crawler(ph, **kw);
+		self.session.add(asin);
+		self.session.commit();
 	
+	def qry_asin_by_ph(self, ph):
+		asin = self.session.query(ASINItem).filter(ASINItem.production_code == ph).first();
+		return asin;
+
 	def __del__(self):
 		self.session.close();	
 
@@ -201,6 +210,8 @@ if __name__ == "__main__":
 	#main();
 	dao = DBOrmDao();
 	#dao.qry_max_asin_id();
-	for i in dao.qry_lastest_asin():
-		print(i);
+	#for i in dao.qry_lastest_asin():
+	#	print(i);
 	#dao.qry_factory_list();
+	print(dao.qry_asin_by_ph('65021171001'));
+	print(dao.qry_asin_by_ph('65021181001'));
