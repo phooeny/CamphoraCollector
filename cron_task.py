@@ -49,7 +49,8 @@ def scan_incremental_tricky():
 	orm_dao = DBOrmDao();
 	for ph in spider.crawlSearchHubPage(max_page_num=-1):
 		#print(ph);
-		if not None == orm_dao.qry_asin_by_ph(ph) and not None == orm_dao.qry_asin_in_spider_queue_by_ph(ph):
+		#if not None == orm_dao.qry_asin_by_ph(ph) and not None == orm_dao.qry_asin_in_spider_queue_by_ph(ph):
+		if None == orm_dao.qry_asin_by_ph(ph) and None == orm_dao.qry_asin_in_spider_queue_by_ph(ph):
 			orm_dao.insert_asin_to_crawle(ph);
 			logging.info("detect asin to crawl : %s"%(ph));
 
@@ -111,9 +112,9 @@ if __name__ == '__main__':
 	if args.freq == '5min':
 		handle_uncrawled_submitted(1);
 	elif args.freq == 'daily':
-		handle_uncrawled_submitted(5);
+		handle_uncrawled_submitted(50);
 	elif args.freq == 'weekly':
-		handle_uncrawled_submitted(10);
+		handle_uncrawled_submitted(60);
 	elif args.freq == 'manual':
 		handle_uncrawled_submitted(float('inf'));
 	elif args.freq == 'scratch':
