@@ -163,7 +163,7 @@ class CottonPHDAO():
 
 	def query_uncrawled_asins(self):
 		cursor = self.conn.db.cursor()
-		sql = "SELECT production_code,source,scan_num FROM %s"%(self.tbl_uncrawled);
+		sql = "SELECT production_code,source,scan_num FROM %s order by production_code"%(self.tbl_uncrawled);
 		try:
 			cursor.execute(sql)
 			results = cursor.fetchall()

@@ -178,8 +178,8 @@ class EMianCang(Spider):
 		return dic_ret;
 	
 	def crawlDetailInfoByPH(self, str_ph):
-		r = requests.get('http://www.emiancang.com/', headers = self.http_headers);
-		self.cookies = r.cookies;
+		rs = requests.get('http://www.emiancang.com/', headers = self.http_headers);
+		self.cookies = rs.cookies;
 		#pdb.set_trace();
 		#res, str_hash_id = self.getHashIDByPH(str_ph);
 		#if 0 != res:
@@ -385,7 +385,7 @@ def append_asin(file_name='ph'):
 	emiancang = EMianWang();
 	emiancang.crawByManufactorys(dic_ph);
 
-def crawl_by_asin_id(asin_id="65021171001"):
+def crawl_by_asin_id(asin_id):
 	#spider = EMianWang();
 	spider = EMianCang();
 	asin = spider.crawlDetailInfoByPH(asin_id);
@@ -394,8 +394,7 @@ def crawl_by_asin_id(asin_id="65021171001"):
 if __name__=="__main__":
 	#init();
 	#append_asin();
-	#crawl_by_asin_id('65673171447');
-	emianwang = EMianWang();
-	#pdb.set_trace();
-	for ph in emianwang.crawlSearchHubPage(max_page_num=2, t=3):
-		print(ph);
+	crawl_by_asin_id('65031181001');
+	#emianwang = EMianWang();
+	#for ph in emianwang.crawlSearchHubPage(max_page_num=2, t=3):
+	#	print(ph);
