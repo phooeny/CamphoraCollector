@@ -7,6 +7,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
 from sqlalchemy.ext.hybrid import hybrid_property, hybrid_method
 import datetime
+import pdb
+
 __all__ = ['DBOrmDao','Factory','ASINCrawlerInfo']
 
 Base = declarative_base()
@@ -66,6 +68,49 @@ class ASINItem(Base):
 	colour_w4 = Column(Float);
 	colour_w5 = Column(Float);
 	colour_l1 = Column(Float);
+	colour_l2 = Column(Float);
+	colour_l3 = Column(Float);
+	colour_ly1 = Column(Float);
+	colour_ly2 = Column(Float);
+	colour_ly3 = Column(Float);
+	colour_y1 = Column(Float);
+	colour_y2 = Column(Float);
+	ginning_p1 = Column(Float);
+	ginning_p2 = Column(Float);
+	ginning_p3 = Column(Float);
+	avg_length = Column(Float);
+	avg_micronaire = Column(Float);
+	avg_evenness = Column(Float);
+	strength = Column(Float);
+	miscellaneous = Column(Float);
+	factory = Column(String(100));
+	production_area = Column(String(100));
+	warehouse = Column(String(100));
+	remark = Column(String(100));
+	length_32 = Column(Float);
+	length_31 = Column(Float);
+	length_30 = Column(Float);
+	length_29 = Column(Float);
+	length_28 = Column(Float);
+	length_27 = Column(Float);
+	length_26 = Column(Float);
+	length_25 = Column(Float);
+	micronaire_c1 = Column(Float);
+	micronaire_b1 = Column(Float);
+	micronaire_a = Column(Float);
+	micronaire_b2 = Column(Float);
+	micronaire_c2 = Column(Float);
+	huichao = Column(Float);
+	strength_max = Column(Float);
+	strength_min = Column(Float);
+	evenness_max = Column(Float);
+	evenness_min = Column(Float);
+	weight_gross = Column(Float);
+	weight_tare = Column(Float);
+	weight_net = Column(Float);
+	weight_conditoned = Column(Float);
+	jiagongleixing = Column(String(100));
+	package_num = Column(String(10));
 	
 	
 	def __init__(self, production_code):
@@ -168,6 +213,22 @@ class DBOrmDao():
 	def __del__(self):
 		self.session.close();	
 
+def qry_asins_by_year(num_year):
+	engine = create_engine('mysql+mysqlconnector://root:root@localhost:3306/ssm_demo_db')
+	DBSession = sessionmaker(bind=engine)
+	session = DBSession()
+	query = session.query(ASINItem).filter(ASINItem.year == num_year).order_by(ASINItem.production_code);
+	ret_dict = {};
+	for row in query:
+		ret_dict[row.production_code] = row.__dict__; 
+		#pdb.set_trace();
+		#print(row.production_code);
+	# 关闭session:
+	session.close()
+	return ret_dict;
+
+
+
 def main():
 	# 初始化数据库连接:
 	engine = create_engine('mysql+mysqlconnector://root:root@localhost:3306/ssm_demo_db')
@@ -211,11 +272,12 @@ def main():
 	session.close()
 
 if __name__ == "__main__":
+	qry_asins_by_year(18);
 	#main();
-	dao = DBOrmDao();
+	#dao = DBOrmDao();
 	#dao.qry_max_asin_id();
 	#for i in dao.qry_lastest_asin():
 	#	print(i);
 	#dao.qry_factory_list();
-	print(dao.qry_asin_by_ph('65021171001'));
-	print(dao.qry_asin_by_ph('65021181001'));
+	#print(dao.qry_asin_by_ph('65021171001'));
+	#print(dao.qry_asin_by_ph('65021181001'));
