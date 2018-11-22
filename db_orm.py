@@ -227,6 +227,15 @@ def qry_asins_by_year(num_year):
 	session.close()
 	return ret_dict;
 
+def qry_asins_by_year_iter(num_year):
+	engine = create_engine('mysql+mysqlconnector://root:root@localhost:3306/ssm_demo_db')
+	DBSession = sessionmaker(bind=engine)
+	session = DBSession()
+	query = session.query(ASINItem).filter(ASINItem.year == num_year).order_by(ASINItem.production_code);
+	for row in query:
+		yield  row.__dict__; 
+	# 关闭session:
+	session.close()
 
 
 def main():

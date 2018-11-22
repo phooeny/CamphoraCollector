@@ -6,7 +6,7 @@ import openpyxl
 import re
 import pdb
 from openpyxl.reader.excel import load_workbook
-
+import argparse
 
 class ExcelTemplete:
 
@@ -203,6 +203,22 @@ class FileExcel_XLSX:
 			else:
 				continue;
 
+	def write_content_iter(self, table, template, asin_iter, **kw):
+		row_num = template.content_row;
+		dic_pos = template.dic_pos;
+		for info in asin_iter(num_year=kw.get('year',18)):
+			if info is None or 'production_code' not in info:
+				continue;
+			for seg in info.keys():
+				if seg not in dic_pos:
+					continue;
+				col = dic_pos[seg];
+				val = info[seg];
+				if isinstance( val, bytearray):
+					val = val.decode(encoding="utf-8", errors="strict");
+				table.cell(row=row_num+1,column=col+1,value=val);
+			row_num += 1;
+
 	def writeContent(self, table, start_row, dic_val, template, order_list):
                 start_row = template.content_row;
 		dic_pos = template.dic_pos;
@@ -232,6 +248,13 @@ class FileExcel_XLSX:
 		table = wb.active;
 		self.writeHead(table, 0, template);
 		self.writeContent(table, 2, dic_val, template, order_list);
+		wb.save(path);
+
+	def save_file_iter(self, path, template, asin_iter, **kw):
+		wb=openpyxl.Workbook();
+		table = wb.active;
+		self.writeHead(table, 0, template);
+		self.write_content_iter(table, template, asin_iter, **kw);
 		wb.save(path);
 
 	def getBatchNumListFromExcel(self,filePath, columnId):
@@ -335,10 +358,23 @@ class FileManager:
 			else:
 				self.file_excel_xls.SaveFile(path, dic_val, template, order_list);
 
+def write_file(year, output, template, **kw):
+	from db_orm import qry_asins_by_year_iter;
+	template = ExcelTemplete(template);
+	file_excel_xlsx = FileExcel_XLSX();
+	file_excel_xlsx.save_file_iter(output, template, qry_asins_by_year_iter, year=year);
 
-if __name__ == '__main__':
+def write():
 	from db_orm import qry_asins_by_year; 
 	file_mgr = FileManager();
 	dic_info = qry_asins_by_year(18);
 	#file_mgr.save('/home/zhangjn/cotton/apache-tomcat-7.0.88/webapps/futures-web/2018.xls', dic_info, 0, dic_info.keys());
 	file_mgr.save('/home/zhangjn/cotton/apache-tomcat-7.0.88/webapps/futures-web/2018.xlsx', dic_info, 0, dic_info.keys());
+
+if __name__ == '__main__':
+	parser = argparse.ArgumentParser();
+	parser.add_argument('--year',  type=int, default=18, required=False, help='input files name');
+	parser.add_argument('--template',  type=int, default=0, required=False, help='input files name');
+	parser.add_argument('--output', default='/home/zhangjn/cotton/apache-tomcat-7.0.88/webapps/futures-web/2018.xlsx', required=False, help='input files name');
+	args = parser.parse_args();
+	write_file(year=args.year, output=args.output, template=args.template);
