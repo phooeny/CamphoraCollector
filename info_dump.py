@@ -7,6 +7,7 @@ import re
 import pdb
 from openpyxl.reader.excel import load_workbook
 import argparse
+from xlsxwriter.workbook import Workbook
 
 class ExcelTemplete:
 
@@ -179,7 +180,53 @@ class ExcelTemplete:
 				};
 
 
+class FileExcel_XLSX_Writer:
+
+	def __init__(self):
+		self.ptn_batch_num = re.compile(r'^[0-9]+$');
+
+	def write_header(self, table, template):
+                start_row = template.head_row;
+		head_list = template.head_list;
+		for item in head_list:
+			if len(item) != 2:
+				continue;
+			#label = item[0].encode('utf-8');
+			label = item[0];
+			pos = item[1];
+			if 2 == len(pos):
+				table.write(start_row+pos[0], pos[1], label);
+			elif 4 == len(pos):
+				table.merge_range( first_row= start_row+pos[0], 
+					first_col= pos[2], 
+					last_row= start_row + pos[1], 
+					last_col= pos[3], data=label);
+			else:
+				continue;
+
+	def write_content_iter(self, table, template, asin_iter, **kw):
+		row_num = template.content_row;
+		dic_pos = template.dic_pos;
+		for info in asin_iter(num_year=kw.get('year',18)):
+			if info is None or 'production_code' not in info:
+				continue;
+			info['production_code'] = str(info['production_code']);
+			for k in info:
+				if isinstance( info[k], bytearray):
+					info[k] = info[k].decode(encoding="utf-8", errors="strict");
+			row = [ info[k] for k in [item[0] for item in sorted(dic_pos.items(), key=lambda x:x[1])]];
+			table.write_row(row_num, 0, row);
+			row_num += 1;
+
+	def save_file_iter(self, path, template, asin_iter, **kw):
+		workbook = Workbook(path);
+		worksheet = workbook.add_worksheet();
+		self.write_header(worksheet, template);
+		self.write_content_iter(worksheet, template, asin_iter, **kw);
+		workbook.close();
+
 class FileExcel_XLSX:
+
 	def __init__(self):
 		self.ptn_batch_num = re.compile(r'^[0-9]+$');
 	
@@ -218,7 +265,8 @@ class FileExcel_XLSX:
 					val = val.decode(encoding="utf-8", errors="strict");
 				table.cell(row=row_num+1,column=col+1,value=val);
 			row_num += 1;
-
+				
+			
 	def writeContent(self, table, start_row, dic_val, template, order_list):
                 start_row = template.content_row;
 		dic_pos = template.dic_pos;
@@ -250,12 +298,6 @@ class FileExcel_XLSX:
 		self.writeContent(table, 2, dic_val, template, order_list);
 		wb.save(path);
 
-	def save_file_iter(self, path, template, asin_iter, **kw):
-		wb=openpyxl.Workbook();
-		table = wb.active;
-		self.writeHead(table, 0, template);
-		self.write_content_iter(table, template, asin_iter, **kw);
-		wb.save(path);
 
 	def getBatchNumListFromExcel(self,filePath, columnId):
 		try:
@@ -361,7 +403,7 @@ class FileManager:
 def write_file(year, output, template, **kw):
 	from db_orm import qry_asins_by_year_iter;
 	template = ExcelTemplete(template);
-	file_excel_xlsx = FileExcel_XLSX();
+	file_excel_xlsx = FileExcel_XLSX_Writer();
 	file_excel_xlsx.save_file_iter(output, template, qry_asins_by_year_iter, year=year);
 
 def write():
